@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>قارئ الكودبار - La Perle Market</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:Arial,sans-serif;background:#f5f7f8;margin:0;color:#222}
+header{background:#0d5360;color:#fff;padding:20px;text-align:center}
+h1{margin:0;font-size:26px}.gold{color:#f0c75e;margin-top:8px}
+main{max-width:700px;margin:18px auto;padding:0 12px}
+.card{background:#fff;border-radius:14px;padding:18px;margin-bottom:14px;box-shadow:0 2px 8px #0001}
+button{border:0;border-radius:9px;padding:12px 16px;background:#0d5360;color:#fff;font-size:17px;width:100%;margin-top:10px}
+input{padding:12px;border:1px solid #ccd5d8;border-radius:9px;width:100%;font-size:18px}
+#video{width:100%;border-radius:12px;background:#111;display:none;margin-top:12px}
+.status{padding:12px;background:#fff8df;border-radius:9px;margin-top:12px}
+.result{font-size:18px;line-height:1.9}
+.ok{color:#146b35;font-weight:bold}.warn{color:#9a6500;font-weight:bold}
+</style>
+</head>
+<body>
+<header>
+<h1>📷 قارئ الكودبار</h1>
+<div class="gold">LA PERLE MARKET — اللؤلؤة الذهبية</div>
+</header>
+
+<main>
+<div class="card">
+<h2>مسح الكود بالكاميرا</h2>
+<button onclick="startScanner()">📷 تشغيل الكاميرا</button>
+<button onclick="stopScanner()" style="background:#777">⏹️ إيقاف الكاميرا</button>
+<video id="video" autoplay playsinline></video>
+<div id="status" class="status">اضغط «تشغيل الكاميرا» ثم وجّه الكاميرا إلى الكودبار.</div>
+</div>
+
+<div class="card">
+<h2>إدخال الكود يدويًا</h2>
+<input id="manual" inputmode="numeric" placeholder="اكتب رقم الكودبار">
+<button onclick="lookup(document.getElementById('manual').value)">🔎 بحث عن المنتج</button>
+</div>
+
+<div class="card">
+<h2>النتيجة</h2>
+<div id="result" class="result">لم يتم مسح أي كود بعد.</div>
+</div>
+</main>
+
+<script>
+let detector=null,stream=null,timer=null;
+const video=document.getElementById('video');
+const statusEl=document.getElementById('status');
+const resultEl=document.getElementById('result');
+
+function products(){
+  try{return JSON.parse(localStorage.getItem('lpm_products')||'[]')}catch(e){return []}
+}
+
+function lookup(raw){
+  const code=String(raw||'').trim();
+  if(!code){resultEl.innerHTML='أدخل كودبار أولًا.';return}
+  const list=products();
+  const p=list.find(x=>String(x.barcode||'').trim()===code);
+  if(p){
+    resultEl.innerHTML=
+      '<div class="ok">✅ المنتج موجود</div>'+
+      '<b>المنتج:</b> '+(p.name_ar||'')+'<br>'+
+      '<b>Français:</b> '+(p.name_fr||'')+'<br>'+
+      '<b>الفئة:</b> '+(p.category||'')+'<br>'+
+      '<b>سعر الشراء:</b> '+Number(p.purchase_price||0).toFixed(2)+' DA<br>'+
+      '<b>سعر البيع:</b> '+Number(p.sale_price||0).toFixed(2)+' DA<br>'+
+      '<b>المخزون:</b> '+Number(p.quantity||0);
+    statusEl.textContent='تم التعرف على الكود: '+code;
+  }else{
+    resultEl.innerHTML='<div class="warn">⚠️ هذا الكود غير مسجل في المنتجات.</div><b>الكود:</b> '+code;
+    statusEl.textContent='الكود غير موجود في قاعدة المنتجات.';
+  }
+}
+
+async function startScanner(){
+  if(!('BarcodeDetector' in window)){
+    statusEl.textContent='❌ هذا المتصفح لا يدعم قارئ الكودبار بالكاميرا. استعمل الإدخال اليدوي أو افتح الصفحة بآخر إصدار من Chrome.';
+    return;
+  }
+  try{
+    const wanted=['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf'];
+    const formats=await BarcodeDetector.getSupportedFormats();
+    const supported=wanted.filter(x=>formats.includes(x));
+    if(!supported.length){
+      statusEl.textContent='❌ لا توجد صيغة باركود مدعومة في هذا المتصفح.';
+      return;
+    }
+    detector=new BarcodeDetector({formats:supported});
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
+    video.srcObject=stream;
+    video.style.display='block';
+    statusEl.textContent='📷 وجّه الكاميرا نحو الكودبار...';
+    scan();
+  }catch(e){
+    statusEl.textContent='❌ لم يتم تشغيل الكاميرا. اسمح للموقع باستخدام الكاميرا ثم أعد المحاولة.';
+  }
+}
+
+async function scan(){
+  if(!detector||!stream)return;
+  try{
+    const codes=await detector.detect(video);
+    if(codes.length){
+      const code=codes[0].rawValue||'';
+      document.getElementById('manual').value=code;
+      lookup(code);
+      stopScanner();
+      return;
+    }
+  }catch(e){}
+  timer=setTimeout(scan,250);
+}
+
+function stopScanner(){
+  if(timer){clearTimeout(timer);timer=null}
+  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
+  video.srcObject=null;
+  video.style.display='none';
+}
+</script>
+</body>
+</html>
