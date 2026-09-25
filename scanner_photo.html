@@ -1,0 +1,14 @@
+<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>قارئ الكودبار</title><style>
+body{margin:0;font-family:Arial;background:#f5f5f5;color:#222}header{background:#002b32;color:#d6b45a;text-align:center;padding:28px 10px}h1{color:white}.card{background:white;margin:18px;padding:20px;border-radius:18px;box-shadow:0 2px 8px #0002}button{width:100%;padding:16px;margin:8px 0;border:0;border-radius:12px;background:#00343b;color:white;font-size:18px}input{box-sizing:border-box;width:100%;padding:15px;border:1px solid #bbb;border-radius:12px;font-size:18px}.ok{background:#e9f8ed;padding:14px;border-radius:12px}.err{background:#fff0f0;padding:14px;border-radius:12px}.note{color:#666;line-height:1.7}</style>
+<header><h1>📷 قارئ الكودبار</h1><div>LA PERLE MARKET — اللؤلؤة الذهبية</div></header>
+<div class="card"><h2>📸 تصوير الباركود</h2><p class="note">هذا الإصدار يستعمل كاميرا الهاتف لالتقاط صورة، ولا يطلب إذن الكاميرا من الموقع.</p>
+<button onclick="document.getElementById('photo').click()">📷 تصوير الباركود</button><input id="photo" type="file" accept="image/*" capture="environment" hidden onchange="scan(this)"><div id="status" class="note">اضغط الزر وصوّر الباركود بوضوح.</div></div>
+<div class="card"><h2>⌨️ إدخال الكود يدوياً</h2><input id="code" inputmode="numeric" placeholder="اكتب رقم الكودبار"><button onclick="lookup(code.value.trim())">🔎 البحث عن المنتج</button><div id="result"></div></div>
+<script>
+const formats=['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf'];
+const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+function products(){try{return JSON.parse(localStorage.getItem('lpm_products')||'[]')}catch(e){return[]}}
+function lookup(c){let p=products().find(x=>String(x.barcode||'').trim()===String(c).trim());result.innerHTML=p?`<div class="ok"><b>✅ المنتج موجود</b><br><b>الاسم:</b> ${esc(p.name_ar)}<br><b>Français:</b> ${esc(p.name_fr)}<br><b>الفئة:</b> ${esc(p.category)}<br><b>سعر البيع:</b> ${esc(p.sale_price)}<br><b>المخزون:</b> ${esc(p.quantity||0)}</div>`:`<div class="err">❌ لم يتم العثور على المنتج بالكود ${esc(c)}</div>`}
+async function scan(i){if(!i.files[0])return;status.textContent='⏳ جارٍ قراءة الباركود...';try{if(!('BarcodeDetector'in window)){status.innerHTML='<div class="err">المتصفح لا يدعم قراءة الباركود من الصور.</div>';return}let d=new BarcodeDetector({formats}),b=await createImageBitmap(i.files[0]),r=await d.detect(b);b.close();if(!r.length){status.innerHTML='<div class="err">❌ لم أجد باركوداً واضحاً. أعد التصوير.</div>';return}code.value=r[0].rawValue;status.innerHTML='✅ تم العثور على الكود: <b>'+esc(r[0].rawValue)+'</b>';lookup(code.value)}catch(e){status.innerHTML='<div class="err">تعذر قراءة الصورة. جرّب صورة أوضح.</div>'}i.value=''}
+</script></html>
