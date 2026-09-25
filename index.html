@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>La Perle Market - اللؤلؤة الذهبية</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d5360">
+<style>body{font-size:16px}button{min-height:44px}.row input{min-width:90px}@media(max-width:600px){header{padding:14px 8px}header h1{font-size:23px}nav{position:sticky;top:0;z-index:5;overflow-x:auto;justify-content:flex-start;flex-wrap:nowrap;padding:8px}nav button{white-space:nowrap;padding:9px 12px}main{margin:10px auto;padding:0 8px}.card{padding:12px;border-radius:10px}.grid{grid-template-columns:1fr 1fr;gap:8px}.grid input{font-size:16px}table{font-size:13px;display:block;overflow-x:auto;white-space:nowrap}.stat{padding:12px}.stat b{font-size:20px}.row{gap:6px}.row>*{min-width:0}}@media(max-width:380px){.grid{grid-template-columns:1fr}}</style>
+<style>
+body{font-family:Arial,sans-serif;background:#f5f7f8;margin:0;color:#222}
+header{background:#0d5360;color:#fff;padding:20px;text-align:center}
+header h1{margin:0;font-size:30px}.gold{color:#f0c75e}
+nav{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;padding:12px;background:#fff}
+button{border:0;border-radius:8px;padding:10px 15px;cursor:pointer;background:#0d5360;color:#fff}
+main{max-width:1100px;margin:20px auto;padding:0 15px}
+.card{background:#fff;border-radius:12px;padding:18px;margin-bottom:15px;box-shadow:0 2px 8px #0001}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.stat{padding:18px;border-radius:10px;background:#eef4f5}.stat b{font-size:24px}
+input,select{padding:10px;border:1px solid #ccd5d8;border-radius:7px;width:100%;box-sizing:border-box}
+table{width:100%;border-collapse:collapse}th,td{padding:9px;border-bottom:1px solid #eee;text-align:right}
+.hidden{display:none}.danger{background:#a43b3b}.goldbtn{background:#b88b20}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row>*{flex:1}
+</style>
+</head>
+<body>
+<header><h1>LA PERLE MARKET</h1><div class="gold">اللؤلؤة الذهبية</div></header>
+<nav>
+<button onclick="show('dashboard')">الرئيسية</button>
+<button onclick="show('products')">المنتجات والمخزون</button>
+<button onclick="show('sale')">Caisse / البيع</button>
+<button onclick="show('reports')">التقارير</button>
+</nav>
+<main>
+<section id="dashboard" class="page">
+<div class="card"><h2>لوحة التحكم</h2>
+<div class="grid">
+<div class="stat">عدد المنتجات<br><b id="pcount">0</b></div>
+<div class="stat">قيمة المخزون<br><b id="stockval">0 DA</b></div>
+<div class="stat">مبيعات اليوم<br><b id="today">0 DA</b></div>
+<div class="stat">منتجات منخفضة المخزون<br><b id="low">0</b></div>
+</div></div></section>
+
+<section id="products" class="page hidden">
+<div class="card"><h2>إضافة منتج</h2>
+<div class="grid">
+<input id="barcode" placeholder="الباركود">
+<input id="name_ar" placeholder="اسم المنتج بالعربية">
+<input id="name_fr" placeholder="Nom en français">
+<input id="category" placeholder="الصنف">
+<input id="buy" type="number" step="0.01" placeholder="سعر الشراء DA">
+<input id="sell" type="number" step="0.01" placeholder="سعر البيع DA">
+<input id="stock" type="number" step="0.01" placeholder="الكمية">
+<input id="min" type="number" step="0.01" value="2" placeholder="حد التنبيه">
+</div><br><button onclick="addProduct()">إضافة المنتج</button></div>
+<div class="card"><h2>المخزون</h2><table><thead><tr><th>المنتج</th><th>الفئة</th><th>الشراء</th><th>البيع</th><th>المخزون</th></tr></thead><tbody id="ptable"></tbody></table></div>
+</section>
+
+<section id="sale" class="page hidden">
+<div class="card"><h2>Caisse</h2>
+<div class="row"><input id="search" placeholder="ابحث بالاسم أو الباركود" oninput="searchProducts()"></div>
+<div id="results"></div>
+<hr><div id="cart"></div><h3>المجموع: <span id="total">0</span> DA</h3>
+<button class="goldbtn" onclick="checkout()">تسجيل البيع</button></div>
+</section>
+
+<section id="reports" class="page hidden">
+<div class="card"><h2>التقارير</h2><p>البيانات محفوظة على الهاتف محليًا.</p><div class="row"><button onclick="exportBackup()">💾 نسخ احتياطي</button><button class="danger" onclick="clearData()">حذف البيانات</button></div></div>
+</section>
+</main>
+<script>
+let products=JSON.parse(localStorage.getItem("lpm_products")||"[]"), sales=JSON.parse(localStorage.getItem("lpm_sales")||"[]"), cart=[];
+function save(){localStorage.setItem("lpm_products",JSON.stringify(products));localStorage.setItem("lpm_sales",JSON.stringify(sales))}
+function money(n){return Number(n||0).toFixed(2)}
+function seed(){if(products.length)return;products=[{id:1,barcode:"611100000001",name_ar:"ماء معدني 0.5 لتر",name_fr:"Eau minérale 0.5L",category:"مشروبات",purchase_price:20,sale_price:30,stock:24,min_stock:6},{id:2,barcode:"611100000002",name_ar:"سكر أبيض 1 كغ",name_fr:"Sucre 1kg",category:"مواد أساسية",purchase_price:90,sale_price:105,stock:15,min_stock:4},{id:3,barcode:"611100000003",name_ar:"زيت عباد الشمس",name_fr:"Huile tournesol",category:"زيوت",purchase_price:125,sale_price:145,stock:12,min_stock:4}];save()}
+seed();
+function load(){renderProducts();updateStats()}
+function show(id){document.querySelectorAll('.page').forEach(x=>x.classList.add('hidden'));document.getElementById(id).classList.remove('hidden');if(id==='products'||id==='dashboard')load()}
+function addProduct(){let d={id:Date.now(),barcode:barcode.value.trim(),name_ar:name_ar.value.trim(),name_fr:name_fr.value.trim(),category:category.value.trim(),purchase_price:+buy.value,sale_price:+sell.value,stock:+stock.value,min_stock:+min.value};if(!d.name_ar)return alert('أدخل اسم المنتج');products.push(d);save();['barcode','name_ar','name_fr','category','buy','sell','stock'].forEach(id=>document.getElementById(id).value='');load();alert('تمت إضافة المنتج')}
+function renderProducts(){ptable.innerHTML=products.map(p=>`<tr><td>${p.name_ar}<br><small>${p.name_fr||''}</small></td><td>${p.category||''}</td><td>${money(p.purchase_price)}</td><td>${money(p.sale_price)}</td><td>${p.stock}</td></tr>`).join('')}
+function searchProducts(){let q=search.value.toLowerCase();results.innerHTML=products.filter(p=>(p.name_ar+p.name_fr+p.barcode).toLowerCase().includes(q)&&p.stock>0).slice(0,12).map(p=>`<button onclick="addCart(${p.id})">${p.name_ar} — ${money(p.sale_price)} DA</button>`).join(' ')}
+function addCart(id){let p=products.find(x=>x.id===id), c=cart.find(x=>x.id===id);if(c){if(c.qty<p.stock)c.qty++}else cart.push({id:p.id,name:p.name_ar,price:p.sale_price,qty:1});renderCart()}
+function renderCart(){cart.innerHTML=cart.map(x=>`<div class="row"><span>${x.name}</span><input type="number" min="1" value="${x.qty}" onchange="x.qty=Math.max(1,+this.value);renderCart()"><span>${money(x.price*x.qty)} DA</span></div>`).join('');total.textContent=money(cart.reduce((s,x)=>s+x.price*x.qty,0))}
+function checkout(){if(!cart.length)return alert('السلة فارغة');for(const x of cart){let p=products.find(p=>p.id===x.id);if(!p||p.stock<x.qty)return alert('الكمية غير متوفرة: '+x.name)}for(const x of cart)products.find(p=>p.id===x.id).stock-=x.qty;sales.push({date:new Date().toISOString(),items:cart,total:cart.reduce((s,x)=>s+x.price*x.qty,0)});save();alert('تم تسجيل البيع');cart=[];renderCart();load()}
+function updateStats(){let todayKey=new Date().toISOString().slice(0,10);let todaySales=sales.filter(s=>s.date.slice(0,10)===todayKey).reduce((a,s)=>a+s.total,0);pcount.textContent=products.length;stockval.textContent=money(products.reduce((a,p)=>a+p.purchase_price*p.stock,0))+' DA';today.textContent=money(todaySales)+' DA';low.textContent=products.filter(p=>p.stock<=p.min_stock).length}
+function exportBackup(){let blob=new Blob([JSON.stringify({products,sales},null,2)],{type:'application/json'});let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='la_perle_market_backup.json';a.click()}
+function clearData(){if(confirm('حذف كل بيانات التطبيق؟')){localStorage.clear();products=[];sales=[];cart=[];load()}}
+load();
+</script>
+<script>if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");</script></body></html>
